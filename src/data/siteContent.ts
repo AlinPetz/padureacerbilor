@@ -72,7 +72,7 @@ export const siteConfig = {
   media: {
     heroVideo: 'media/video/hero-drona.mp4',
     heroPoster: 'media/hero-poster.webp',
-    socialShare: 'https://alinpetz.github.io/padureacerbilor/media/social-share.webp',
+    socialShare: 'https://padureacerbilor.ro/media/social-share.webp',
   },
 }
 
