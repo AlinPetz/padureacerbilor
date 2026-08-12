@@ -36,17 +36,17 @@ import {
   outdoorFeatures,
   outdoorSection,
   propertyFacts,
-  roomSection,
-  rooms,
   secondaryExteriorMedia,
   siteConfig,
   type MediaItem,
 } from './data/siteContent'
 import {
+  PHONE_CALL_HREF,
   WHATSAPP_DISPLAY_NUMBER,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
-  formatInputDate,
+  getNextSortableDate,
+  getTodaySortable,
   validateInquiryForm,
   type InquiryField,
 } from './utils/whatsapp'
@@ -84,11 +84,6 @@ const iconMap = {
 
 function getIcon(name: string) {
   return iconMap[name as IconName] ?? Leaf
-}
-
-function phoneHref() {
-  const phone = siteConfig.contact.telephone.replace(/[^\d+]/g, '')
-  return phone ? `tel:${phone}` : ''
 }
 
 function usePrefersReducedMotion() {
@@ -431,56 +426,6 @@ function Intro() {
   )
 }
 
-function Accommodation() {
-  const [activeImages, setActiveImages] = useState<Record<string, number>>({})
-
-  const imageForRoom = (roomId: string) => activeImages[roomId] ?? 0
-
-  return (
-    <section id="cazare" className="section accommodation-section reveal">
-      <div className="section-heading">
-        <p className="section-kicker">Camere</p>
-        <h2>{roomSection.title}</h2>
-        <p>{roomSection.description}</p>
-      </div>
-      <div className="room-grid" aria-label="Cele patru dormitoare duble">
-        {rooms.map((room) => {
-          const activeImage = imageForRoom(room.id)
-          const media = room.images[activeImage] ?? room.images[0]
-
-          return (
-            <article className="room-item" key={room.id}>
-              <MediaFrame item={media} caption={false} />
-              <div className="room-copy">
-                <div>
-                  <h3>{room.title}</h3>
-                  <p>{room.images.length} perspective ale aceleiași camere</p>
-                </div>
-                <div className="room-thumbnails" aria-label={`Fotografii pentru ${room.title}`}>
-                  {room.images.map((image, index) => (
-                    <button
-                      type="button"
-                      key={image.src}
-                      className={activeImage === index ? 'is-active' : ''}
-                      aria-label={`Afișează ${image.caption}`}
-                      aria-pressed={activeImage === index}
-                      onClick={() =>
-                        setActiveImages((current) => ({ ...current, [room.id]: index }))
-                      }
-                    >
-                      <img src={image.src} alt="" loading="lazy" decoding="async" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
 function LivingKitchen() {
   const [activeImages, setActiveImages] = useState<Record<string, number>>({})
   const { openLightbox, lightbox } = useImageLightbox()
@@ -683,6 +628,19 @@ function Facilities() {
           </div>
         ))}
       </div>
+      <article className="facility-highlight-card">
+        <div className="facility-highlight-icon" aria-hidden="true">
+          <Sun />
+        </div>
+        <div>
+          <span>Se achită suplimentar</span>
+          <h3>Ciubăr</h3>
+          <p>Ciubărul este disponibil la cerere și se achită suplimentar.</p>
+        </div>
+        <a className="button button-secondary" href="#contact">
+          Întreabă despre ciubăr
+        </a>
+      </article>
     </section>
   )
 }
@@ -877,6 +835,8 @@ const initialForm: FormFields = {
 function ContactSection() {
   const [form, setForm] = useState<FormFields>(initialForm)
   const [errors, setErrors] = useState<Partial<Record<keyof FormFields, string>>>({})
+  const todaySortable = getTodaySortable()
+  const departureMin = form.arrival ? getNextSortableDate(form.arrival) : todaySortable
   const inputRefs = useRef<Record<InquiryField, HTMLInputElement | HTMLTextAreaElement | null>>({
     name: null,
     arrival: null,
@@ -886,7 +846,13 @@ function ContactSection() {
   })
 
   const updateField = (field: keyof FormFields, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }))
+    setForm((current) => {
+      const next = { ...current, [field]: value }
+      if (field === 'arrival' && next.departure && value && next.departure <= value) {
+        next.departure = ''
+      }
+      return next
+    })
   }
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -909,9 +875,6 @@ function ContactSection() {
 
   const errorList = Object.values(errors)
   const directContacts = [
-    siteConfig.contact.telephone
-      ? { icon: Phone, label: 'Telefon', value: siteConfig.contact.telephone, href: phoneHref() }
-      : null,
     siteConfig.contact.email
       ? { icon: Mail, label: 'Email', value: siteConfig.contact.email, href: `mailto:${siteConfig.contact.email}` }
       : null,
@@ -935,7 +898,18 @@ function ContactSection() {
         <p className="contact-whatsapp-note">WhatsApp: {WHATSAPP_DISPLAY_NUMBER}</p>
       </div>
       <div className={`contact-layout ${directContacts.length === 0 ? 'is-solo' : ''}`}>
-        <form className="inquiry-form" noValidate onSubmit={onSubmit}>
+        <div className="contact-form-stack">
+          <div className="call-card">
+            <div>
+              <p>Preferi să vorbim direct?</p>
+              <span>Sună-ne pentru a verifica rapid disponibilitatea.</span>
+            </div>
+            <a href={PHONE_CALL_HREF} aria-label={`Sună la Pădurea Cerbilor: ${WHATSAPP_DISPLAY_NUMBER}`}>
+              <Phone aria-hidden="true" />
+              {WHATSAPP_DISPLAY_NUMBER}
+            </a>
+          </div>
+          <form className="inquiry-form" noValidate onSubmit={onSubmit}>
           {errorList.length > 0 && (
             <div className="form-errors" role="alert" aria-live="polite">
               <p>Verificați câmpurile marcate:</p>
@@ -949,6 +923,8 @@ function ContactSection() {
           <label>
             <span>Nume</span>
             <input
+              id="name"
+              name="name"
               ref={(element) => {
                 inputRefs.current.name = element
               }}
@@ -963,38 +939,44 @@ function ContactSection() {
           <label>
             <span>Data sosirii</span>
             <input
+              id="arrival"
+              name="arrival"
+              type="date"
               ref={(element) => {
                 inputRefs.current.arrival = element
               }}
               value={form.arrival}
-              placeholder="ex. 10.09.2026"
-              onBlur={(event) => updateField('arrival', formatInputDate(event.target.value))}
               onChange={(event) => updateField('arrival', event.target.value)}
+              min={todaySortable}
               aria-invalid={Boolean(errors.arrival)}
               aria-describedby={errors.arrival ? 'error-arrival' : undefined}
-              inputMode="numeric"
+              autoComplete="off"
             />
             {errors.arrival && <small id="error-arrival">{errors.arrival}</small>}
           </label>
           <label>
             <span>Data plecării</span>
             <input
+              id="departure"
+              name="departure"
+              type="date"
               ref={(element) => {
                 inputRefs.current.departure = element
               }}
               value={form.departure}
-              placeholder="ex. 12.09.2026"
-              onBlur={(event) => updateField('departure', formatInputDate(event.target.value))}
               onChange={(event) => updateField('departure', event.target.value)}
+              min={departureMin}
               aria-invalid={Boolean(errors.departure)}
               aria-describedby={errors.departure ? 'error-departure' : undefined}
-              inputMode="numeric"
+              autoComplete="off"
             />
             {errors.departure && <small id="error-departure">{errors.departure}</small>}
           </label>
           <label>
             <span>Număr de persoane</span>
             <input
+              id="guests"
+              name="guests"
               ref={(element) => {
                 inputRefs.current.guests = element
               }}
@@ -1012,6 +994,8 @@ function ContactSection() {
           <label className="full">
             <span>Mesaj</span>
             <textarea
+              id="message"
+              name="message"
               ref={(element) => {
                 inputRefs.current.message = element
               }}
@@ -1024,7 +1008,8 @@ function ContactSection() {
             <MessageCircle aria-hidden="true" />
             Trimite pe WhatsApp
           </button>
-        </form>
+          </form>
+        </div>
         {directContacts.length > 0 && (
           <aside className="direct-contact" aria-label="Contact direct">
             {directContacts.map((contact) => {
@@ -1125,10 +1110,12 @@ function StructuredData() {
     image: siteConfig.media.socialShare,
     numberOfRooms: 4,
     amenityFeature: [
+      { '@type': 'LocationFeatureSpecification', name: '4 băi' },
       { '@type': 'LocationFeatureSpecification', name: 'Foișor' },
       { '@type': 'LocationFeatureSpecification', name: 'Vatră de foc' },
       { '@type': 'LocationFeatureSpecification', name: 'Terasă exterioară' },
       { '@type': 'LocationFeatureSpecification', name: 'Bucătărie' },
+      { '@type': 'LocationFeatureSpecification', name: 'Ciubăr la cerere, contra cost' },
     ],
     ...(siteConfig.contact.telephone ? { telephone: siteConfig.contact.telephone } : {}),
     ...(siteConfig.contact.email ? { email: siteConfig.contact.email } : {}),
@@ -1152,7 +1139,6 @@ function App() {
         <Hero />
         <QuickFacts />
         <Intro />
-        <Accommodation />
         <LivingKitchen />
         <ExteriorSection />
         <Facilities />

@@ -58,10 +58,10 @@ export const siteConfig = {
   brandName: 'Pădurea Cerbilor',
   tagline: 'Cabană A-frame în natură',
   description:
-    'Pădurea Cerbilor este o cabană A-frame cu patru dormitoare duble, foișor, vatră de foc, zonă de zi, bucătărie și terasă, potrivită pentru familii și grupuri de prieteni.',
+    'Pădurea Cerbilor este o cabană A-frame cu patru dormitoare duble, patru băi, foișor, vatră de foc, zonă de zi, bucătărie și terasă, potrivită pentru familii și grupuri de prieteni.',
   contact: {
     whatsapp: WHATSAPP_DISPLAY_NUMBER,
-    telephone: '',
+    telephone: WHATSAPP_DISPLAY_NUMBER,
     email: '',
     facebook: '',
     instagram: '',
@@ -80,7 +80,7 @@ export const siteConfig = {
 
 export const navigation = [
   { label: 'Cabana', href: '#cabana' },
-  { label: 'Camere', href: '#cazare' },
+  { label: 'Camere', href: '#interior' },
   { label: 'Facilități', href: '#facilitati' },
   { label: 'Galerie', href: '#galerie' },
   { label: 'Locație', href: '#locatie' },
@@ -89,6 +89,7 @@ export const navigation = [
 
 export const propertyFacts = [
   { icon: 'BedDouble', value: '4 dormitoare duble' },
+  { icon: 'Home', value: '4 băi' },
   { icon: 'Armchair', value: 'Zonă de zi pentru relaxare' },
   { icon: 'CookingPot', value: 'Bucătărie deschisă' },
   { icon: 'Utensils', value: 'Zonă de luat masa' },
@@ -110,12 +111,6 @@ export const secondaryExteriorMedia: MediaItem = {
   alt: 'Terasă din lemn și fațada cabanei Pădurea Cerbilor',
   caption: 'Terasă și fațadă',
   category: 'exterior',
-}
-
-export const roomSection = {
-  title: 'Patru camere pentru odihnă și liniște',
-  description:
-    'Cabana dispune de patru dormitoare duble, potrivite pentru familii și grupuri de prieteni.',
 }
 
 export const rooms: RoomItem[] = [
@@ -386,6 +381,7 @@ export const interiorMedia: MediaItem[] = [...livingMedia, ...kitchenDiningMedia
 export const amenities: Record<string, AmenityItem[]> = {
   Interior: [
     { icon: 'BedDouble', label: 'Patru dormitoare duble' },
+    { icon: 'Home', label: '4 băi' },
     { icon: 'Armchair', label: 'Zonă de zi' },
     { icon: 'Tv', label: 'Televizor' },
     { icon: 'Utensils', label: 'Zonă de luat masa' },

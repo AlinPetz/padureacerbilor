@@ -1,5 +1,6 @@
 export const WHATSAPP_DISPLAY_NUMBER = '+40 744 798 501'
 export const WHATSAPP_URL_NUMBER = '40744798501'
+export const PHONE_CALL_HREF = 'tel:+40744798501'
 export const MAX_GUESTS = 8
 
 export type InquiryFormValues = {
@@ -78,6 +79,18 @@ export function getTodaySortable() {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+export function getNextSortableDate(value: string) {
+  const parsedDate = parseInputDate(value)
+  if (!parsedDate) return ''
+  const [year, month, day] = parsedDate.sortable.split('-').map(Number)
+  const nextDate = new Date(year, month - 1, day + 1)
+  return [
+    String(nextDate.getFullYear()),
+    String(nextDate.getMonth() + 1).padStart(2, '0'),
+    String(nextDate.getDate()).padStart(2, '0'),
+  ].join('-')
 }
 
 export function validateInquiryForm(

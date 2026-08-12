@@ -5,13 +5,14 @@ import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatInputDate,
+  getNextSortableDate,
   validateInquiryForm,
 } from '../src/utils/whatsapp.ts'
 
 const validValues = {
   name: 'Alin Petz',
-  arrival: '10.09.2026',
-  departure: '12.09.2026',
+  arrival: '2026-09-10',
+  departure: '2026-09-12',
   guests: '6',
   message: 'Doresc să aflu dacă ciubărul este disponibil.',
 }
@@ -69,6 +70,7 @@ test('omits the optional message block when message is empty', () => {
 test('formats date inputs without timezone conversion', () => {
   assert.equal(formatInputDate('2026-09-10'), '10.09.2026')
   assert.equal(formatInputDate('10.09.2026'), '10.09.2026')
+  assert.equal(getNextSortableDate('2026-09-10'), '2026-09-11')
 })
 
 test('rejects past arrival dates, invalid ranges and more than 8 guests', () => {
