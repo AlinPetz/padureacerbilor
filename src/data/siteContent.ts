@@ -1,3 +1,5 @@
+import { WHATSAPP_DISPLAY_NUMBER } from '../utils/whatsapp'
+
 export type MediaCategory =
   | 'cabana'
   | 'camere'
@@ -58,7 +60,7 @@ export const siteConfig = {
   description:
     'Pădurea Cerbilor este o cabană A-frame cu patru dormitoare duble, foișor, vatră de foc, zonă de zi, bucătărie și terasă, potrivită pentru familii și grupuri de prieteni.',
   contact: {
-    whatsapp: '',
+    whatsapp: WHATSAPP_DISPLAY_NUMBER,
     telephone: '',
     email: '',
     facebook: '',

@@ -1053,6 +1053,11 @@ textarea {
   color: var(--paper);
 }
 
+.contact-whatsapp-note {
+  margin-top: 0.75rem;
+  font-weight: 900;
+}
+
 .contact-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(290px, 0.75fr);

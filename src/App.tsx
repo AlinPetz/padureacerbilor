@@ -42,6 +42,14 @@ import {
   siteConfig,
   type MediaItem,
 } from './data/siteContent'
+import {
+  WHATSAPP_DISPLAY_NUMBER,
+  buildWhatsAppMessage,
+  buildWhatsAppUrl,
+  formatInputDate,
+  validateInquiryForm,
+  type InquiryField,
+} from './utils/whatsapp'
 
 type IconName = keyof typeof iconMap
 
@@ -74,21 +82,8 @@ const iconMap = {
   X,
 } satisfies Record<string, LucideIcon>
 
-const baseInquiryText =
-  'Bună ziua! Aș dori să verific disponibilitatea pentru Pădurea Cerbilor.'
-
 function getIcon(name: string) {
   return iconMap[name as IconName] ?? Leaf
-}
-
-function whatsappUrl(message: string) {
-  const number = siteConfig.contact.whatsapp.replace(/[^\d]/g, '')
-  const text = encodeURIComponent(message)
-  return number ? `https://wa.me/${number}?text=${text}` : `https://wa.me/?text=${text}`
-}
-
-function hasValue(value: string) {
-  return value.trim().length > 0
 }
 
 function phoneHref() {
@@ -882,55 +877,34 @@ const initialForm: FormFields = {
 function ContactSection() {
   const [form, setForm] = useState<FormFields>(initialForm)
   const [errors, setErrors] = useState<Partial<Record<keyof FormFields, string>>>({})
-  const [status, setStatus] = useState('')
-  const [preparedMessage, setPreparedMessage] = useState('')
-  const hasWhatsapp = hasValue(siteConfig.contact.whatsapp)
+  const inputRefs = useRef<Record<InquiryField, HTMLInputElement | HTMLTextAreaElement | null>>({
+    name: null,
+    arrival: null,
+    departure: null,
+    guests: null,
+    message: null,
+  })
 
-  const updateField = (field: keyof FormFields, value: string | boolean) => {
+  const updateField = (field: keyof FormFields, value: string) => {
     setForm((current) => ({ ...current, [field]: value }))
-    setStatus('')
-    setPreparedMessage('')
   }
 
-  const validate = () => {
-    const nextErrors: Partial<Record<keyof FormFields, string>> = {}
-    if (!form.name.trim()) nextErrors.name = 'Introduceți numele.'
-    if (!form.arrival.trim()) nextErrors.arrival = 'Introduceți data sosirii.'
-    if (!form.departure.trim()) nextErrors.departure = 'Introduceți data plecării.'
-    if (!form.guests || Number(form.guests) < 1) {
-      nextErrors.guests = 'Introduceți numărul de persoane.'
-    }
-    setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0
-  }
-
-  const composeMessage = () => {
-    const lines = [
-      baseInquiryText,
-      `Nume: ${form.name}`,
-      `Sosire: ${form.arrival}`,
-      `Plecare: ${form.departure}`,
-      `Număr persoane: ${form.guests}`,
-      form.message ? `Mesaj: ${form.message}` : null,
-    ].filter(Boolean)
-    return lines.join('\n')
-  }
-
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!validate()) return
-    const message = composeMessage()
-    if (hasWhatsapp) {
-      window.open(whatsappUrl(message), '_blank', 'noopener,noreferrer')
+    const validation = validateInquiryForm(form)
+    if (!validation.isValid) {
+      setErrors(validation.errors)
+      inputRefs.current[validation.firstInvalidField]?.focus()
       return
     }
-    setPreparedMessage(message)
-    try {
-      await navigator.clipboard?.writeText(message)
-      setStatus('Mesajul a fost pregătit și copiat.')
-    } catch {
-      setStatus('Mesajul a fost pregătit mai jos.')
-    }
+
+    setErrors({})
+    const message = buildWhatsAppMessage(
+      validation.values,
+      validation.formattedArrival,
+      validation.formattedDeparture,
+    )
+    window.location.href = buildWhatsAppUrl(message)
   }
 
   const errorList = Object.values(errors)
@@ -955,9 +929,10 @@ function ContactSection() {
         <p className="section-kicker">Disponibilitate</p>
         <h2>Pregătiți mesajul pentru rezervare</h2>
         <p>
-          Formularul generează un mesaj în limba română. Trimiterea solicitării
-          nu reprezintă confirmarea automată a rezervării.
+          Se va deschide WhatsApp cu mesajul completat. Pentru trimitere, confirmați
+          mesajul în aplicație.
         </p>
+        <p className="contact-whatsapp-note">WhatsApp: {WHATSAPP_DISPLAY_NUMBER}</p>
       </div>
       <div className={`contact-layout ${directContacts.length === 0 ? 'is-solo' : ''}`}>
         <form className="inquiry-form" noValidate onSubmit={onSubmit}>
@@ -971,26 +946,12 @@ function ContactSection() {
               </ul>
             </div>
           )}
-          {status && (
-            <p className="form-status" role="status">
-              {status}
-            </p>
-          )}
-          {preparedMessage && (
-            <label className="prepared-message-label full">
-              <span>Mesaj pregătit</span>
-              <textarea
-                className="prepared-message"
-                readOnly
-                rows={7}
-                value={preparedMessage}
-                aria-label="Mesaj pregătit pentru WhatsApp"
-              />
-            </label>
-          )}
           <label>
             <span>Nume</span>
             <input
+              ref={(element) => {
+                inputRefs.current.name = element
+              }}
               value={form.name}
               onChange={(event) => updateField('name', event.target.value)}
               aria-invalid={Boolean(errors.name)}
@@ -1002,8 +963,12 @@ function ContactSection() {
           <label>
             <span>Data sosirii</span>
             <input
+              ref={(element) => {
+                inputRefs.current.arrival = element
+              }}
               value={form.arrival}
               placeholder="ex. 10.09.2026"
+              onBlur={(event) => updateField('arrival', formatInputDate(event.target.value))}
               onChange={(event) => updateField('arrival', event.target.value)}
               aria-invalid={Boolean(errors.arrival)}
               aria-describedby={errors.arrival ? 'error-arrival' : undefined}
@@ -1014,8 +979,12 @@ function ContactSection() {
           <label>
             <span>Data plecării</span>
             <input
+              ref={(element) => {
+                inputRefs.current.departure = element
+              }}
               value={form.departure}
               placeholder="ex. 12.09.2026"
+              onBlur={(event) => updateField('departure', formatInputDate(event.target.value))}
               onChange={(event) => updateField('departure', event.target.value)}
               aria-invalid={Boolean(errors.departure)}
               aria-describedby={errors.departure ? 'error-departure' : undefined}
@@ -1026,8 +995,13 @@ function ContactSection() {
           <label>
             <span>Număr de persoane</span>
             <input
+              ref={(element) => {
+                inputRefs.current.guests = element
+              }}
               type="number"
               min="1"
+              max="8"
+              step="1"
               value={form.guests}
               onChange={(event) => updateField('guests', event.target.value)}
               aria-invalid={Boolean(errors.guests)}
@@ -1038,6 +1012,9 @@ function ContactSection() {
           <label className="full">
             <span>Mesaj</span>
             <textarea
+              ref={(element) => {
+                inputRefs.current.message = element
+              }}
               rows={5}
               value={form.message}
               onChange={(event) => updateField('message', event.target.value)}
@@ -1045,7 +1022,7 @@ function ContactSection() {
           </label>
           <button className="button button-primary full" type="submit">
             <MessageCircle aria-hidden="true" />
-            {hasWhatsapp ? 'Trimite pe WhatsApp' : 'Copiază mesajul'}
+            Trimite pe WhatsApp
           </button>
         </form>
         {directContacts.length > 0 && (
